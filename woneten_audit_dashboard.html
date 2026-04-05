@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Woneten Fashion Mall – Retail Audit Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161920;
+    --surface2: #1e2230;
+    --border: #2a2f42;
+    --accent: #c9a96e;
+    --accent2: #e8c98a;
+    --text: #e8eaf0;
+    --muted: #7a8099;
+    --green: #3ecf8e;
+    --yellow: #f5c542;
+    --orange: #f5844a;
+    --red: #e8455a;
+    --critical: #c4294a;
+    --sidebar-w: 260px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+
+  /* SIDEBAR */
+  #sidebar {
+    width: var(--sidebar-w); min-height: 100vh; background: var(--surface);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; z-index: 100; padding: 0 0 24px 0;
+  }
+  .sidebar-logo {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-logo .brand { font-family: 'Playfair Display', serif; font-size: 17px; color: var(--accent); line-height: 1.2; }
+  .sidebar-logo .sub { font-size: 11px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+  .sidebar-section { padding: 20px 20px 0; }
+  .sidebar-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; font-weight: 600; }
+  .filter-group { margin-bottom: 18px; }
+  .filter-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .filter-group select, .filter-group input[type=date] {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 9px 12px; border-radius: 8px; font-size: 13px;
+    font-family: 'DM Sans', sans-serif; outline: none; cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+  }
+  .filter-group select:focus, .filter-group input[type=date]:focus { border-color: var(--accent); }
+  #resetBtn {
+    margin: 8px 20px 0; width: calc(100% - 40px); padding: 10px; background: var(--accent);
+    color: #0d0f14; border: none; border-radius: 8px; font-size: 13px; font-weight: 700;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; letter-spacing: 0.5px;
+    transition: background 0.2s;
+  }
+  #resetBtn:hover { background: var(--accent2); }
+  .sidebar-footer { margin-top: auto; padding: 20px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+
+  /* MAIN */
+  #main { margin-left: var(--sidebar-w); flex: 1; padding: 32px 36px; }
+
+  .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .top-bar h1 { font-family: 'Playfair Display', serif; font-size: 26px; color: var(--text); }
+  .top-bar .meta { font-size: 12px; color: var(--muted); text-align: right; line-height: 1.6; }
+  .top-bar .badge {
+    display: inline-block; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--accent); padding: 4px 12px; border-radius: 20px; font-size: 11px;
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
+  }
+
+  /* KPI CARDS */
+  .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 28px; }
+  .kpi-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 18px; position: relative; overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .kpi-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--accent-line, var(--accent));
+  }
+  .kpi-card .kpi-icon { font-size: 22px; margin-bottom: 12px; }
+  .kpi-card .kpi-val { font-size: 30px; font-weight: 700; color: var(--kpi-color, var(--text)); line-height: 1; }
+  .kpi-card .kpi-label { font-size: 11px; color: var(--muted); margin-top: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  /* CHARTS GRID */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .charts-grid.three { grid-template-columns: 1.6fr 1fr 1fr; }
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px; position: relative;
+  }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 18px; }
+  .chart-wrap { position: relative; height: 220px; }
+  .chart-wrap.tall { height: 260px; }
+
+  /* HEATMAP */
+  .heatmap-wrap { overflow-x: auto; }
+  table.heatmap { width: 100%; border-collapse: separate; border-spacing: 5px; }
+  table.heatmap th { font-size: 11px; color: var(--muted); font-weight: 600; text-align: center; padding: 4px; }
+  table.heatmap td {
+    border-radius: 8px; text-align: center; padding: 10px 6px;
+    font-size: 13px; font-weight: 700; color: #fff; transition: transform 0.15s;
+  }
+  table.heatmap td:hover { transform: scale(1.08); cursor: default; }
+  table.heatmap .row-label { text-align: right; color: var(--muted); font-size: 12px; font-weight: 500; background: none !important; }
+
+  /* INSIGHTS */
+  .insights-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .insight-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px; border-left: 4px solid var(--ins-color, var(--accent));
+  }
+  .insight-card .ins-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .insight-card .ins-val { font-size: 18px; font-weight: 700; color: var(--ins-color, var(--text)); margin-bottom: 4px; }
+  .insight-card .ins-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* DATA TABLE */
+  .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin-bottom: 20px; }
+  .table-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .table-header .chart-title { margin-bottom: 0; }
+  #tableSearch {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 8px 14px; border-radius: 8px; font-size: 13px; font-family: 'DM Sans', sans-serif;
+    outline: none; width: 220px;
+  }
+  #tableSearch:focus { border-color: var(--accent); }
+  .data-table-wrap { overflow-x: auto; max-height: 340px; overflow-y: auto; }
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.data-table th {
+    background: var(--surface2); color: var(--muted); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 1px; padding: 10px 12px; text-align: left; position: sticky; top: 0; z-index: 2;
+    border-bottom: 1px solid var(--border);
+  }
+  table.data-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  table.data-table tr:last-child td { border-bottom: none; }
+  table.data-table tr:hover td { background: var(--surface2); }
+  .badge-risk, .badge-status, .badge-comp {
+    display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .r-low { background: #3ecf8e22; color: var(--green); }
+  .r-medium { background: #f5c54222; color: var(--yellow); }
+  .r-high { background: #f5844a22; color: var(--orange); }
+  .r-critical { background: #e8455a22; color: var(--red); }
+  .s-open { background: #e8455a22; color: var(--red); }
+  .s-inprogress { background: #f5c54222; color: var(--yellow); }
+  .s-closed { background: #3ecf8e22; color: var(--green); }
+  .c-compliant { background: #3ecf8e22; color: var(--green); }
+  .c-noncompliant { background: #e8455a22; color: var(--red); }
+  .c-partial { background: #f5844a22; color: var(--orange); }
+  #recordCount { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="sidebar-logo">
+    <div class="brand">Woneten Fashion Mall</div>
+    <div class="sub">Retail Audit System</div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Filters</div>
+    <div class="filter-group">
+      <label>Department</label>
+      <select id="fDept">
+        <option value="">All Departments</option>
+        <option>Sales</option>
+        <option>Inventory</option>
+        <option>Billing</option>
+        <option>Customer Service</option>
+        <option>Security</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Risk Level</label>
+      <select id="fRisk">
+        <option value="">All Risk Levels</option>
+        <option>Low</option>
+        <option>Medium</option>
+        <option>High</option>
+        <option>Critical</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Compliance Status</label>
+      <select id="fComp">
+        <option value="">All Statuses</option>
+        <option>Compliant</option>
+        <option>Non-Compliant</option>
+        <option>Partial</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Audit Status</label>
+      <select id="fStatus">
+        <option value="">All</option>
+        <option>Open</option>
+        <option>In Progress</option>
+        <option>Closed</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Date From</label>
+      <input type="date" id="fDateFrom" value="2024-01-01"/>
+    </div>
+    <div class="filter-group">
+      <label>Date To</label>
+      <input type="date" id="fDateTo" value="2024-12-31"/>
+    </div>
+    <button id="resetBtn">↺ Reset Filters</button>
+  </div>
+  <div class="sidebar-footer">
+    Woneten Fashion Mall Pvt Ltd<br>
+    Academic Project – Retail Audit<br>
+    FY 2024 · 300 Employees
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main id="main">
+  <div class="top-bar">
+    <div>
+      <div style="font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Internal Audit Portal</div>
+      <h1>Retail Audit Dashboard</h1>
+    </div>
+    <div class="meta">
+      <div class="badge">FY 2024</div><br>
+      Woneten Fashion Mall Pvt Ltd &nbsp;|&nbsp; Hybrid Retail<br>
+      <span id="lastUpdated"></span>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card" style="--accent-line:var(--accent);--kpi-color:var(--accent2)">
+      <div class="kpi-icon">📋</div>
+      <div class="kpi-val" id="kpiTotal">–</div>
+      <div class="kpi-label">Total Audits</div>
+    </div>
+    <div class="kpi-card" style="--accent-line:var(--green);--kpi-color:var(--green)">
+      <div class="kpi-icon">✅</div>
+      <div class="kpi-val" id="kpiComp">–</div>
+      <div class="kpi-label">% Compliance</div>
+    </div>
+    <div class="kpi-card" style="--accent-line:var(--red);--kpi-color:var(--red)">
+      <div class="kpi-icon">🚨</div>
+      <div class="kpi-val" id="kpiCritical">–</div>
+      <div class="kpi-label">High & Critical Issues</div>
+    </div>
+    <div class="kpi-card" style="--accent-line:var(--orange);--kpi-color:var(--orange)">
+      <div class="kpi-icon">📂</div>
+      <div class="kpi-val" id="kpiOpen">–</div>
+      <div class="kpi-label">Open Issues</div>
+    </div>
+    <div class="kpi-card" style="--accent-line:var(--yellow);--kpi-color:var(--yellow)">
+      <div class="kpi-icon">⚡</div>
+      <div class="kpi-val" id="kpiRisk">–</div>
+      <div class="kpi-label">Avg Risk Score</div>
+    </div>
+  </div>
+
+  <!-- Insights -->
+  <div class="insights-grid">
+    <div class="insight-card" style="--ins-color:var(--red)">
+      <div class="ins-title">⚠ Highest Risk Department</div>
+      <div class="ins-val" id="insHighDept">–</div>
+      <div class="ins-desc" id="insHighDeptDesc">–</div>
+    </div>
+    <div class="insight-card" style="--ins-color:var(--orange)">
+      <div class="ins-title">📊 % Non-Compliance</div>
+      <div class="ins-val" id="insNonComp">–</div>
+      <div class="ins-desc" id="insNonCompDesc">–</div>
+    </div>
+    <div class="insight-card" style="--ins-color:var(--critical)">
+      <div class="ins-title">🔴 Critical Issues Detected</div>
+      <div class="ins-val" id="insCritical">–</div>
+      <div class="ins-desc" id="insCriticalDesc">–</div>
+    </div>
+  </div>
+
+  <!-- Row 1 Charts -->
+  <div class="charts-grid three" style="margin-bottom:20px;">
+    <div class="chart-card">
+      <div class="chart-title">Issues by Department</div>
+      <div class="chart-wrap tall"><canvas id="barChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Compliance Status</div>
+      <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Risk Level Distribution</div>
+      <div class="chart-wrap"><canvas id="donutChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Row 2 Charts -->
+  <div class="charts-grid" style="margin-bottom:20px;">
+    <div class="chart-card">
+      <div class="chart-title">Audits Over Time (Monthly)</div>
+      <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Heatmap – Department vs Risk Level</div>
+      <div class="heatmap-wrap" id="heatmapWrap"></div>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <div class="chart-title">Audit Records <span id="recordCount"></span></div>
+      <input id="tableSearch" type="text" placeholder="🔍 Search records…"/>
+    </div>
+    <div class="data-table-wrap">
+      <table class="data-table" id="dataTable">
+        <thead>
+          <tr>
+            <th>Audit ID</th><th>Department</th><th>Audit Area</th>
+            <th>Risk Level</th><th>Risk Score</th><th>Compliance</th>
+            <th>Status</th><th>Audit Date</th><th>Issue Description</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+// ─── DATASET (85 records) ───────────────────────────────────────────────────
+const RAW_DATA = [
+  {id:"WF-001",dept:"Sales",area:"Sales Target Review",risk:"High",score:7,comp:"Partial",status:"Open",date:"2024-01-05",issue:"Monthly targets missed by 18% in menswear section.",rec:"Revisit target-setting process; implement weekly tracking."},
+  {id:"WF-002",dept:"Inventory",area:"Stock Management",risk:"Critical",score:9,comp:"Non-Compliant",status:"Open",date:"2024-01-08",issue:"Unrecorded stock loss of 42 dress units detected.",rec:"Conduct full stock recount; install RFID tracking."},
+  {id:"WF-003",dept:"Billing",area:"Billing Accuracy",risk:"High",score:8,comp:"Non-Compliant",status:"In Progress",date:"2024-01-10",issue:"Overcharging customers by ₹50–₹200 on 12 invoices.",rec:"Audit all recent billing entries; retrain billing staff."},
+  {id:"WF-004",dept:"Customer Service",area:"Customer Handling",risk:"Medium",score:5,comp:"Partial",status:"In Progress",date:"2024-01-12",issue:"Complaint resolution SLA breached in 30% of cases.",rec:"Implement escalation matrix and SLA dashboard."},
+  {id:"WF-005",dept:"Security",area:"Store Security",risk:"Critical",score:10,comp:"Non-Compliant",status:"Open",date:"2024-01-15",issue:"CCTV cameras non-functional in 2 trial room zones.",rec:"Immediate camera repair; increase guard patrol frequency."},
+  {id:"WF-006",dept:"Inventory",area:"Returns & Refunds",risk:"Medium",score:6,comp:"Partial",status:"Closed",date:"2024-01-18",issue:"Return records not updated in system for 15 items.",rec:"Enforce real-time system update for all returns."},
+  {id:"WF-007",dept:"Sales",area:"Online Orders",risk:"Low",score:2,comp:"Compliant",status:"Closed",date:"2024-01-20",issue:"Minor delay in order confirmation emails.",rec:"Optimize email trigger batch frequency."},
+  {id:"WF-008",dept:"Billing",area:"Discount Validation",risk:"High",score:7,comp:"Non-Compliant",status:"Open",date:"2024-01-22",issue:"Unauthorized discounts applied to 8 transactions.",rec:"Restrict discount authority; add approval workflow."},
+  {id:"WF-009",dept:"Customer Service",area:"Feedback Collection",risk:"Low",score:3,comp:"Compliant",status:"Closed",date:"2024-01-25",issue:"Feedback forms not distributed post-purchase consistently.",rec:"Automate digital feedback via POS integration."},
+  {id:"WF-010",dept:"Security",area:"Access Control",risk:"High",score:8,comp:"Non-Compliant",status:"In Progress",date:"2024-01-28",issue:"Staff using shared access cards for restricted areas.",rec:"Issue individual biometric cards to all staff immediately."},
+  {id:"WF-011",dept:"Sales",area:"Floor Display Compliance",risk:"Medium",score:5,comp:"Partial",status:"In Progress",date:"2024-02-02",issue:"Seasonal display not updated as per planogram guidelines.",rec:"Assign display team lead; conduct weekly checks."},
+  {id:"WF-012",dept:"Inventory",area:"Stock Management",risk:"High",score:8,comp:"Non-Compliant",status:"Open",date:"2024-02-04",issue:"Slow-moving inventory exceeds 60-day threshold for 80 SKUs.",rec:"Initiate clearance sale; update reorder logic."},
+  {id:"WF-013",dept:"Billing",area:"GST Compliance",risk:"Critical",score:9,comp:"Non-Compliant",status:"Open",date:"2024-02-07",issue:"GST not applied correctly on e-commerce orders in 3 categories.",rec:"Fix billing software tax module; consult GST auditor."},
+  {id:"WF-014",dept:"Customer Service",area:"Staff Conduct",risk:"Medium",score:4,comp:"Partial",status:"Closed",date:"2024-02-09",issue:"Two complaints about rude behavior from floor associates.",rec:"Conduct customer service refresher training."},
+  {id:"WF-015",dept:"Security",area:"Emergency Preparedness",risk:"High",score:7,comp:"Partial",status:"Open",date:"2024-02-12",issue:"Fire drill not conducted in Q4 2023 as mandated.",rec:"Schedule quarterly fire drills; update evacuation plan."},
+  {id:"WF-016",dept:"Sales",area:"Promotions Audit",risk:"Low",score:3,comp:"Compliant",status:"Closed",date:"2024-02-14",issue:"Promotional pricing correctly applied in all checked cases.",rec:"Continue monitoring via automated POS reports."},
+  {id:"WF-017",dept:"Inventory",area:"Vendor Compliance",risk:"Medium",score:5,comp:"Partial",status:"In Progress",date:"2024-02-17",issue:"2 vendors delivered goods without proper GRN documentation.",rec:"Enforce GRN policy; block payments for non-compliant vendors."},
+  {id:"WF-018",dept:"Billing",area:"Refund Processing",risk:"Medium",score:6,comp:"Partial",status:"In Progress",date:"2024-02-19",issue:"Average refund processing time is 9 days vs 3-day SLA.",rec:"Streamline refund approval; automate eligible refunds."},
+  {id:"WF-019",dept:"Customer Service",area:"Online Complaint Handling",risk:"High",score:7,comp:"Non-Compliant",status:"Open",date:"2024-02-22",issue:"Online complaints on platform unattended for over 5 days.",rec:"Assign dedicated digital CX team; set 24hr SLA."},
+  {id:"WF-020",dept:"Security",area:"Shoplifting Prevention",risk:"Critical",score:9,comp:"Non-Compliant",status:"Open",date:"2024-02-25",issue:"Three shoplifting incidents unreported to management in January.",rec:"Mandatory incident reporting; install EAS systems."},
+  {id:"WF-021",dept:"Sales",area:"Cross-Selling Compliance",risk:"Low",score:2,comp:"Compliant",status:"Closed",date:"2024-03-01",issue:"No issues found in cross-selling scripts audit.",rec:"Maintain current training standards."},
+  {id:"WF-022",dept:"Inventory",area:"Stock Management",risk:"Critical",score:10,comp:"Non-Compliant",status:"Open",date:"2024-03-04",issue:"High-value ethnic wear section has ₹1.2L unexplained stock variance.",rec:"Immediate full audit; freeze stock movement until resolved."},
+  {id:"WF-023",dept:"Billing",area:"Billing Accuracy",risk:"Low",score:3,comp:"Compliant",status:"Closed",date:"2024-03-06",issue:"All checked invoices accurate for Kids' wear segment.",rec:"Replicate billing controls to other segments."},
+  {id:"WF-024",dept:"Customer Service",area:"Exchange Policy Adherence",risk:"Medium",score:5,comp:"Partial",status:"In Progress",date:"2024-03-08",issue:"Staff not following 7-day exchange policy consistently.",rec:"Print and display policy at counter; retrain staff."},
+  {id:"WF-025",dept:"Security",area:"Store Security",risk:"Medium",score:6,comp:"Partial",status:"In Progress",date:"2024-03-11",issue:"Night shift security logs incomplete for 6 shifts.",rec:"Introduce digital log-in system for all security shifts."},
+  {id:"WF-026",dept:"Sales",area:"Sales Target Review",risk:"Medium",score:5,comp:"Compliant",status:"Closed",date:"2024-03-13",issue:"Women's wear targets met; men's marginally under.",rec:"Analyze product mix; adjust assortment."},
+  {id:"WF-027",dept:"Inventory",area:"Expiry & Damage Control",risk:"High",score:7,comp:"Non-Compliant",status:"Open",date:"2024-03-16",issue:"Damaged goods worth ₹45,000 not segregated or written off.",rec:"Establish damage management SOP; conduct monthly write-off."},
+  {id:"WF-028",dept:"Billing",area:"Cash Reconciliation",risk:"High",score:8,comp:"Non-Compliant",status:"Open",date:"2024-03-18",issue:"Daily cash tally mismatch detected on 4 consecutive days.",rec:"Implement dual-check system; review POS access logs."},
+  {id:"WF-029",dept:"Customer Service",area:"Loyalty Program Audit",risk:"Low",score:2,comp:"Compliant",status:"Closed",date:"2024-03-20",issue:"Loyalty points correctly awarded in all sampled transactions.",rec:"Continue automated loyalty tracking."},
+  {id:"WF-030",dept:"Security",area:"Access Control",risk:"High",score:8,comp:"Non-Compliant",status:"Open",date:"2024-03-23",issue:"Master key found unaccounted for; reported missing.",rec:"Rekey all locks immediately; conduct investigation."},
+  {id:"WF-031",dept:"Sales",area:"Online Orders",risk:"Medium",score:4,comp:"Partial",status:"In Progress",date:"2024-04-01",issue:"15% of online orders have incorrect size tagging.",rec:"Update product master data; validate before listing."},
+  {id:"WF-032",dept:"Inventory",area:"Returns & Refunds",risk:"Low",score:3,comp:"Compliant",status:"Closed",date:"2024-04-03",issue:"Return stock accurately re-shelved after quality check.",rec:"Maintain current process with monthly audits."},
+  {id:"WF-033",dept:"Billing",area:"Discount Validation",risk:"Medium",score:5,comp:"Partial",status:"In Progress",date:"2024-04-05",issue:"Bulk discount approvals not documented in 5 cases.",rec:"Introduce digital approval trail for all discounts."},
+  {id:"WF-034",dept:"Customer Service",area:"Customer Handling",risk:"Low",score:2,comp:"Compliant",status:"Closed",date:"2024-04-08",issue:"Customer satisfaction score at 4.3/5 – within acceptable range.",rec:"Focus on improving score in billing area."},
+  {id:"WF-035",dept:"Security",area:"Shoplifting Prevention",risk:"High",score:7,comp:"Partial",status:"In Progress",date:"2024-04-10",issue:"Security tagging missing from 8% of floor merchandise.",rec:"Enforce tagging SOP; daily spot check by supervisor."},
+  {id:"WF-036",dept:"Sales",area:"Promotions Audit",risk:"High",score:7,comp:"Non-Compliant",status:"Open",date:"2024-04-13",issue:"Expired promotional offer active at POS for 3 days undetected.",rec:"Automate promo expiry; add daily system health check."},
+  {id:"WF-037",dept:"Inventory",area:"Stock Management",risk:"Medium",score:6,comp:"Partial",status:"In Progress",date:"2024-04-15",issue:"Mismatch between shelf stock and WMS data for 28 SKUs.",rec:"Conduct cycle count; sync WMS with physical stock."},
+  {id:"WF-038",dept:"Billing",area:"GST Compliance",risk:"High",score:8,comp:"Non-Compliant",status:"Open",date:"2024-04-17",issue:"B2B invoices missing HSN codes for 6 transactions.",rec:"Mandatory HSN field in billing software; audit past invoices."},
+  {id:"WF-039",dept:"Customer Service",area:"Online Complaint Handling",risk:"Medium",score:5,comp:"Partial",status:"Closed",date:"2024-04-20",issue:"Social media complaints addressed within 48hrs in most cases.",rec:"Aim for 24-hour resolution on all channels."},
+  {id:"WF-040",dept:"Security",area:"Emergency Preparedness",risk:"Medium",score:5,comp:"Compliant",status:"Closed",date:"2024-04-22",issue:"Fire extinguishers serviced and within validity period.",rec:"Schedule next service before expiry date in Dec 2024."},
+  {id:"WF-041",dept:"Sales",area:"Floor Display Compliance",risk:"Low",score:3,comp:"Compliant",status:"Closed",date:"2024-05-02",issue:"Summer collection display per planogram – no deviations.",rec:"Replicate display discipline to online photo shoots."},
+  {id:"WF-042",dept:"Inventory",area:"Vendor Compliance",risk:"High",score:7,comp:"Non-Compliant",status:"Open",date:"2024-05-05",issue:"Vendor supplied 120 units of wrong color variants without notice.",rec:"Penalize vendor per SLA; update purchase order verification."},
+  {id:"WF-043",dept:"Billing",area:"Refund Processing",risk:"Low",score:3,comp:"Compliant",status:"Closed",date:"2024-05-07",issue:"Online refund TAT improved to 2 days – within SLA.",rec:"Share best practice with physical store refund team."},
+  {id:"WF-044",dept:"Customer Service",area:"Staff Conduct",risk:"High",score:7,comp:"Non-Compliant",status:"Open",date:"2024-05-09",issue:"Staff caught on CCTV mishandling a customer dispute.",rec:"Issue warning letter; mandatory conflict resolution training."},
+  {id:"WF-045",dept:"Security",area:"Store Security",risk:"Critical",score:9,comp:"Non-Compliant",status:"Open",date:"2024-05-12",issue:"Unescorted external vendor accessed stockroom unaccompanied.",rec:"Mandatory escort policy; access log mandatory for all vendors."},
+  {id:"WF-046",dept:"Sales",area:"Cross-Selling Compliance",risk:"Medium",score:4,comp:"Partial",status:"In Progress",date:"2024-05-14",issue:"Associates upselling non-recommended products.",rec:"Restrict upsell list; provide updated product training."},
+  {id:"WF-047",dept:"Inventory",area:"Stock Management",risk:"High",score:7,comp:"Non-Compliant",status:"Open",date:"2024-05-17",issue:"New arrivals not tagged within 24-hour SLA in 30% of cases.",rec:"Streamline tagging process; assign dedicated tagging staff."},
+  {id:"WF-048",dept:"Billing",area:"Cash Reconciliation",risk:"Medium",score:5,comp:"Partial",status:"In Progress",date:"2024-05-20",issue:"Counter 3 shows ₹3,200 surplus over 5 days – unexplained.",rec:"Audit counter 3 logs; check for manual overrides."},
+  {id:"WF-049",dept:"Customer Service",area:"Loyalty Program Audit",risk:"Medium",score:6,comp:"Partial",status:"In Progress",date:"2024-05-22",issue:"Duplicate loyalty accounts found for 11 customers.",rec:"Data cleanse loyalty database; enforce email verification."},
+  {id:"WF-050",dept:"Security",area:"Shoplifting Prevention",risk:"Medium",score:5,comp:"Compliant",status:"Closed",date:"2024-05-25",issue:"EAS gate checks conducted for all exits.",rec:"Maintain vigilance; review EAS failure logs monthly."},
+  {id:"WF-051",dept:"Sales",area:"Sales Target Review",risk:"Low",score:2,comp:"Compliant",status:"Closed",date:"2024-06-03",issue:"Q2 sales targets achieved at 104% overall.",rec:"Set stretch targets for Q3 based on trend."},
+  {id:"WF-052",dept:"Inventory",area:"Expiry & Damage Control",risk:"Critical",score:9,comp:"Non-Compliant",status:"Open",date:"2024-06-06",issue:"Stock worth ₹85,000 found damaged due to water leakage; unreported.",rec:"Repair roof; file insurance claim; report to management."},
+  {id:"WF-053",dept:"Billing",area:"Billing Accuracy",risk:"Medium",score:4,comp:"Partial",status:"In Progress",date:"2024-06-08",issue:"Scan errors causing price override on 3 product categories.",rec:"Update barcode database; retrain cashiers on override protocol."},
+  {id:"WF-054",dept:"Customer Service",area:"Feedback Collection",risk:"Low",score:2,comp:"Compliant",status:"Closed",date:"2024-06-10",issue:"NPS score at 62 – above retail sector benchmark of 45.",rec:"Leverage positive reviews in marketing campaigns."},
+  {id:"WF-055",dept:"Security",area:"Access Control",risk:"Medium",score:6,comp:"Partial",status:"In Progress",date:"2024-06-13",issue:"Access card records show 3 staff accessing beyond shift hours.",rec:"Restrict after-hours access; notify supervisors of exceptions."},
+  {id:"WF-056",dept:"Sales",area:"Online Orders",risk:"High",score:7,comp:"Non-Compliant",status:"Open",date:"2024-06-16",issue:"Return rate for online orders at 28% vs industry norm of 12%.",rec:"Improve size guides; add video product content."},
+  {id:"WF-057",dept:"Inventory",area:"Returns & Refunds",risk:"Medium",score:5,comp:"Partial",status:"In Progress",date:"2024-06-18",issue:"Returned items being re-shelved without quality inspection.",rec:"Mandatory QC step before re-shelving; log all returns."},
+  {id:"WF-058",dept:"Billing",area:"Discount Validation",risk:"High",score:8,comp:"Non-Compliant",status:"Open",date:"2024-06-20",issue:"Cashier applied 40% discount beyond authorized limit of 25%.",rec:"Hard-cap discount at POS; alert manager on override."},
+  {id:"WF-059",dept:"Customer Service",area:"Exchange Policy Adherence",risk:"Low",score:3,comp:"Compliant",status:"Closed",date:"2024-06-22",issue:"Exchange policy communicated clearly at all counters.",rec:"Translate policy notice into regional languages."},
+  {id:"WF-060",dept:"Security",area:"Emergency Preparedness",risk:"Low",score:3,comp:"Compliant",status:"Closed",date:"2024-06-25",issue:"Emergency exit routes clear and properly marked.",rec:"Annual verification of all exit routes."},
+  {id:"WF-061",dept:"Sales",area:"Promotions Audit",risk:"Low",score:2,comp:"Compliant",status:"Closed",date:"2024-07-04",issue:"All Eid promotional offers correctly configured at POS.",rec:"Document promo setup as SOP for future events."},
+  {id:"WF-062",dept:"Inventory",area:"Vendor Compliance",risk:"Medium",score:4,comp:"Partial",status:"Closed",date:"2024-07-07",issue:"3 vendors delayed shipments by 5–10 days without notice.",rec:"Add penalty clause to vendor agreements; track delivery SLA."},
+  {id:"WF-063",dept:"Billing",area:"GST Compliance",risk:"Medium",score:5,comp:"Partial",status:"In Progress",date:"2024-07-09",issue:"GSTR-1 filing delayed by 2 days in June.",rec:"Set reminder workflow; assign backup filer."},
+  {id:"WF-064",dept:"Customer Service",area:"Customer Handling",risk:"Medium",score:6,comp:"Partial",status:"In Progress",date:"2024-07-11",issue:"Long queue wait times observed on weekends – avg 12 mins.",rec:"Deploy additional staff on weekends; enable self-checkout."},
+  {id:"WF-065",dept:"Security",area:"Store Security",risk:"High",score:8,comp:"Non-Compliant",status:"Open",date:"2024-07-14",issue:"Blind spot identified in basement stockroom – no CCTV coverage.",rec:"Install 2 additional cameras; temporary guard posting in interim."},
+  {id:"WF-066",dept:"Sales",area:"Floor Display Compliance",risk:"Medium",score:6,comp:"Partial",status:"In Progress",date:"2024-07-16",issue:"Festive display set up 3 days late per calendar.",rec:"Integrate visual merchandising into project calendar."},
+  {id:"WF-067",dept:"Inventory",area:"Stock Management",risk:"Low",score:3,comp:"Compliant",status:"Closed",date:"2024-07-19",issue:"Physical stock count matches system records within 0.2% variance.",rec:"Maintain monthly cycle count discipline."},
+  {id:"WF-068",dept:"Billing",area:"Cash Reconciliation",risk:"High",score:7,comp:"Non-Compliant",status:"Open",date:"2024-07-21",issue:"₹8,400 shortfall at end-of-day in counter 1 – unexplained.",rec:"Review cashier logs; check for void transaction patterns."},
+  {id:"WF-069",dept:"Customer Service",area:"Online Complaint Handling",risk:"Low",score:2,comp:"Compliant",status:"Closed",date:"2024-07-23",issue:"All escalated online complaints resolved within SLA.",rec:"Publish resolution metrics on customer portal."},
+  {id:"WF-070",dept:"Security",area:"Shoplifting Prevention",risk:"Critical",score:10,comp:"Non-Compliant",status:"Open",date:"2024-07-26",issue:"Organized shoplifting attempt resulting in ₹22,000 loss.",rec:"File police report; review CCTV; upgrade EAS system urgently."},
+  {id:"WF-071",dept:"Sales",area:"Sales Target Review",risk:"High",score:7,comp:"Non-Compliant",status:"Open",date:"2024-08-02",issue:"Online sales down 22% vs target – attributed to competitor sale.",rec:"Launch counter-promotion; review pricing strategy."},
+  {id:"WF-072",dept:"Inventory",area:"Stock Management",risk:"Medium",score:5,comp:"Partial",status:"In Progress",date:"2024-08-05",issue:"10 SKUs consistently out of stock without replenishment trigger.",rec:"Adjust reorder point logic; set automated alerts."},
+  {id:"WF-073",dept:"Billing",area:"Billing Accuracy",risk:"High",score:7,comp:"Non-Compliant",status:"Open",date:"2024-08-07",issue:"Double billing detected for 4 customers during system migration.",rec:"Issue credit notes; audit all transactions during migration window."},
+  {id:"WF-074",dept:"Customer Service",area:"Staff Conduct",risk:"Medium",score:5,comp:"Partial",status:"In Progress",date:"2024-08-09",issue:"Staff attendance in customer service zone below 85% threshold.",rec:"Enforce attendance policy; review shift scheduling."},
+  {id:"WF-075",dept:"Security",area:"Access Control",risk:"High",score:8,comp:"Non-Compliant",status:"Open",date:"2024-08-12",issue:"Server room accessed without authorization by IT contractor.",rec:"Revoke contractor access immediately; conduct security review."},
+  {id:"WF-076",dept:"Sales",area:"Cross-Selling Compliance",risk:"Low",score:3,comp:"Compliant",status:"Closed",date:"2024-08-15",issue:"Accessories cross-sell rate at 34% – above 25% target.",rec:"Recognize high-performing associates; share best practices."},
+  {id:"WF-077",dept:"Inventory",area:"Expiry & Damage Control",risk:"High",score:7,comp:"Non-Compliant",status:"Open",date:"2024-08-18",issue:"Packaging damage on 60 garments due to improper stacking.",rec:"Retrain warehouse staff; revise stacking guidelines."},
+  {id:"WF-078",dept:"Billing",area:"Refund Processing",risk:"Medium",score:4,comp:"Partial",status:"In Progress",date:"2024-08-20",issue:"Walk-in refund verification taking 20 mins avg vs 5-min SLA.",rec:"Streamline verification; enable instant OTP-based verification."},
+  {id:"WF-079",dept:"Customer Service",area:"Loyalty Program Audit",risk:"Low",score:3,comp:"Compliant",status:"Closed",date:"2024-08-22",issue:"Loyalty redemptions accurately tracked and reconciled.",rec:"Introduce tiered loyalty benefits to boost retention."},
+  {id:"WF-080",dept:"Security",area:"Emergency Preparedness",risk:"Medium",score:6,comp:"Partial",status:"In Progress",date:"2024-08-25",issue:"First aid kits in 2 zones found with expired medicines.",rec:"Replace expired medicines; set quarterly restock calendar."},
+  {id:"WF-081",dept:"Sales",area:"Online Orders",risk:"Medium",score:5,comp:"Partial",status:"In Progress",date:"2024-09-03",issue:"Delivery partner SLA missed in 18% of orders.",rec:"Review logistics partner contract; shortlist backup courier."},
+  {id:"WF-082",dept:"Inventory",area:"Returns & Refunds",risk:"High",score:7,comp:"Non-Compliant",status:"Open",date:"2024-09-06",issue:"High return rate (32%) for online sarees – labeling mismatch.",rec:"Update product photography; revise color naming standards."},
+  {id:"WF-083",dept:"Billing",area:"GST Compliance",risk:"Critical",score:9,comp:"Non-Compliant",status:"Open",date:"2024-09-09",issue:"Input tax credit claimed incorrectly for ₹1.8L – under review.",rec:"Engage GST consultant; file rectification return immediately."},
+  {id:"WF-084",dept:"Customer Service",area:"Feedback Collection",risk:"Low",score:2,comp:"Compliant",status:"Closed",date:"2024-09-12",issue:"Post-purchase survey response rate improved to 48%.",rec:"Introduce incentive (loyalty points) for survey completion."},
+  {id:"WF-085",dept:"Security",area:"Store Security",risk:"High",score:8,comp:"Non-Compliant",status:"Open",date:"2024-09-15",issue:"Security guard found sleeping on duty during peak hours.",rec:"Issue warning letter; increase supervisor check-ins."},
+];
+
+// ─── CHART INSTANCES ────────────────────────────────────────────────────────
+let barChart, pieChart, donutChart, lineChart;
+
+const CHART_DEFAULTS = {
+  font: { family: 'DM Sans' },
+  color: '#7a8099',
+};
+Chart.defaults.font.family = 'DM Sans';
+Chart.defaults.color = '#7a8099';
+
+const DEPT_COLORS = {
+  Sales: '#c9a96e', Inventory: '#e8455a', Billing: '#f5844a',
+  'Customer Service': '#3ecf8e', Security: '#7c6ef5'
+};
+const RISK_COLORS = { Low: '#3ecf8e', Medium: '#f5c542', High: '#f5844a', Critical: '#e8455a' };
+const COMP_COLORS = { Compliant: '#3ecf8e', 'Non-Compliant': '#e8455a', Partial: '#f5844a' };
+
+function heatColor(v, max) {
+  if (v === 0) return '#1e2230';
+  const ratio = v / max;
+  if (ratio < 0.25) return '#3ecf8e44';
+  if (ratio < 0.5)  return '#f5c54266';
+  if (ratio < 0.75) return '#f5844a99';
+  return '#e8455acc';
+}
+function heatText(v) {
+  if (v === 0) return '#7a8099';
+  return '#fff';
+}
+
+// ─── FILTER & RENDER ────────────────────────────────────────────────────────
+function getFiltered() {
+  const dept = document.getElementById('fDept').value;
+  const risk = document.getElementById('fRisk').value;
+  const comp = document.getElementById('fComp').value;
+  const stat = document.getElementById('fStatus').value;
+  const from = document.getElementById('fDateFrom').value;
+  const to   = document.getElementById('fDateTo').value;
+  const q    = (document.getElementById('tableSearch').value || '').toLowerCase();
+
+  return RAW_DATA.filter(r => {
+    if (dept && r.dept !== dept) return false;
+    if (risk && r.risk !== risk) return false;
+    if (comp && r.comp !== comp) return false;
+    if (stat && r.status !== stat) return false;
+    if (from && r.date < from) return false;
+    if (to   && r.date > to)   return false;
+    if (q && !JSON.stringify(r).toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function render() {
+  const data = getFiltered();
+  updateKPIs(data);
+  updateInsights(data);
+  updateBarChart(data);
+  updatePieChart(data);
+  updateDonutChart(data);
+  updateLineChart(data);
+  updateHeatmap(data);
+  updateTable(data);
+}
+
+// ─── KPIs ───────────────────────────────────────────────────────────────────
+function updateKPIs(data) {
+  const total = data.length;
+  const comp  = data.filter(r => r.comp === 'Compliant').length;
+  const hc    = data.filter(r => r.risk === 'High' || r.risk === 'Critical').length;
+  const open  = data.filter(r => r.status === 'Open').length;
+  const avgR  = total ? (data.reduce((s,r) => s + r.score, 0) / total).toFixed(1) : 0;
+  document.getElementById('kpiTotal').textContent   = total;
+  document.getElementById('kpiComp').textContent    = total ? Math.round(comp/total*100)+'%' : '–';
+  document.getElementById('kpiCritical').textContent = hc;
+  document.getElementById('kpiOpen').textContent    = open;
+  document.getElementById('kpiRisk').textContent    = avgR;
+}
+
+// ─── INSIGHTS ───────────────────────────────────────────────────────────────
+function updateInsights(data) {
+  // Highest risk dept by avg score
+  const deptScores = {};
+  data.forEach(r => {
+    if (!deptScores[r.dept]) deptScores[r.dept] = [];
+    deptScores[r.dept].push(r.score);
+  });
+  let topDept = '–', topScore = 0;
+  Object.entries(deptScores).forEach(([d,scores]) => {
+    const avg = scores.reduce((a,b)=>a+b,0)/scores.length;
+    if (avg > topScore) { topScore = avg; topDept = d; }
+  });
+  document.getElementById('insHighDept').textContent = topDept;
+  document.getElementById('insHighDeptDesc').textContent = `Avg risk score: ${topScore.toFixed(1)} across ${deptScores[topDept]?.length||0} audits`;
+
+  // % non-compliance
+  const nonComp = data.filter(r=>r.comp==='Non-Compliant').length;
+  const pct = data.length ? Math.round(nonComp/data.length*100) : 0;
+  document.getElementById('insNonComp').textContent = pct+'%';
+  document.getElementById('insNonCompDesc').textContent = `${nonComp} of ${data.length} audit records are non-compliant.`;
+
+  // Critical issues
+  const crit = data.filter(r=>r.risk==='Critical');
+  document.getElementById('insCritical').textContent = crit.length + ' Issues';
+  const areas = [...new Set(crit.map(r=>r.area))].slice(0,2).join(', ');
+  document.getElementById('insCriticalDesc').textContent = crit.length > 0
+    ? `Areas: ${areas}${crit.length>2?' & more':''}. Immediate action required.`
+    : 'No critical issues in current filter.';
+}
+
+// ─── BAR CHART ──────────────────────────────────────────────────────────────
+function updateBarChart(data) {
+  const depts = ['Sales','Inventory','Billing','Customer Service','Security'];
+  const counts = depts.map(d => data.filter(r=>r.dept===d).length);
+  if (barChart) barChart.destroy();
+  barChart = new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+      labels: depts,
+      datasets: [{
+        label: 'Audits',
+        data: counts,
+        backgroundColor: depts.map(d=>DEPT_COLORS[d]+'cc'),
+        borderColor: depts.map(d=>DEPT_COLORS[d]),
+        borderWidth: 1.5,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} audits` } } },
+      scales: {
+        x: { grid: { color: '#2a2f42' }, ticks: { color: '#7a8099', font: { size: 11 } } },
+        y: { grid: { color: '#2a2f42' }, ticks: { color: '#7a8099', stepSize: 1 }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+// ─── PIE CHART ──────────────────────────────────────────────────────────────
+function updatePieChart(data) {
+  const labels = ['Compliant','Non-Compliant','Partial'];
+  const counts = labels.map(l => data.filter(r=>r.comp===l).length);
+  if (pieChart) pieChart.destroy();
+  pieChart = new Chart(document.getElementById('pieChart'), {
+    type: 'pie',
+    data: {
+      labels,
+      datasets: [{ data: counts, backgroundColor: labels.map(l=>COMP_COLORS[l]+'cc'), borderColor: labels.map(l=>COMP_COLORS[l]), borderWidth: 2 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#7a8099', font: { size: 11 }, padding: 14 }, position: 'bottom' } }
+    }
+  });
+}
+
+// ─── DONUT CHART ─────────────────────────────────────────────────────────────
+function updateDonutChart(data) {
+  const labels = ['Low','Medium','High','Critical'];
+  const counts = labels.map(l => data.filter(r=>r.risk===l).length);
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: counts, backgroundColor: labels.map(l=>RISK_COLORS[l]+'cc'), borderColor: labels.map(l=>RISK_COLORS[l]), borderWidth: 2, hoverOffset: 8 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '60%',
+      plugins: { legend: { labels: { color: '#7a8099', font: { size: 11 }, padding: 14 }, position: 'bottom' } }
+    }
+  });
+}
+
+// ─── LINE CHART ──────────────────────────────────────────────────────────────
+function updateLineChart(data) {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const counts = Array(12).fill(0);
+  data.forEach(r => { const m = parseInt(r.date.split('-')[1]) - 1; if (m >= 0 && m < 12) counts[m]++; });
+  if (lineChart) lineChart.destroy();
+  lineChart = new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [{
+        label: 'Audits', data: counts,
+        borderColor: '#c9a96e', backgroundColor: 'rgba(201,169,110,0.12)',
+        fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#c9a96e', borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#2a2f42' }, ticks: { color: '#7a8099', font: { size: 11 } } },
+        y: { grid: { color: '#2a2f42' }, ticks: { color: '#7a8099', stepSize: 1 }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+// ─── HEATMAP ─────────────────────────────────────────────────────────────────
+function updateHeatmap(data) {
+  const depts = ['Sales','Inventory','Billing','Customer Service','Security'];
+  const risks = ['Low','Medium','High','Critical'];
+  const matrix = {};
+  depts.forEach(d => { matrix[d] = {}; risks.forEach(r => matrix[d][r] = 0); });
+  data.forEach(r => { if (matrix[r.dept]) matrix[r.dept][r.risk]++; });
+  const maxVal = Math.max(1, ...depts.map(d => Math.max(...risks.map(r => matrix[d][r]))));
+
+  let html = `<table class="heatmap"><thead><tr><th></th>${risks.map(r=>`<th>${r}</th>`).join('')}</tr></thead><tbody>`;
+  depts.forEach(d => {
+    html += `<tr><td class="row-label">${d}</td>`;
+    risks.forEach(r => {
+      const v = matrix[d][r];
+      html += `<td style="background:${heatColor(v,maxVal)};color:${heatText(v)}" title="${d} / ${r}: ${v} audits">${v||'–'}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('heatmapWrap').innerHTML = html;
+}
+
+// ─── TABLE ───────────────────────────────────────────────────────────────────
+function riskBadge(r) {
+  const cls = {Low:'r-low',Medium:'r-medium',High:'r-high',Critical:'r-critical'}[r]||'';
+  return `<span class="badge-risk ${cls}">${r}</span>`;
+}
+function statusBadge(s) {
+  const cls = {Open:'s-open','In Progress':'s-inprogress',Closed:'s-closed'}[s]||'';
+  return `<span class="badge-status ${cls}">${s}</span>`;
+}
+function compBadge(c) {
+  const cls = {Compliant:'c-compliant','Non-Compliant':'c-noncompliant',Partial:'c-partial'}[c]||'';
+  return `<span class="badge-comp ${cls}">${c}</span>`;
+}
+function updateTable(data) {
+  const tbody = document.getElementById('tableBody');
+  document.getElementById('recordCount').textContent = `(${data.length} records)`;
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td style="color:var(--accent);font-weight:600">${r.id}</td>
+      <td>${r.dept}</td>
+      <td>${r.area}</td>
+      <td>${riskBadge(r.risk)}</td>
+      <td style="font-weight:700;color:${Object.values(RISK_COLORS)[['Low','Medium','High','Critical'].indexOf(r.risk)]}">${r.score}</td>
+      <td>${compBadge(r.comp)}</td>
+      <td>${statusBadge(r.status)}</td>
+      <td>${r.date}</td>
+      <td style="color:var(--muted);max-width:280px">${r.issue}</td>
+    </tr>`).join('');
+}
+
+// ─── EVENTS ──────────────────────────────────────────────────────────────────
+['fDept','fRisk','fComp','fStatus','fDateFrom','fDateTo'].forEach(id => {
+  document.getElementById(id).addEventListener('change', render);
+});
+document.getElementById('tableSearch').addEventListener('input', render);
+document.getElementById('resetBtn').addEventListener('click', () => {
+  document.getElementById('fDept').value = '';
+  document.getElementById('fRisk').value = '';
+  document.getElementById('fComp').value = '';
+  document.getElementById('fStatus').value = '';
+  document.getElementById('fDateFrom').value = '2024-01-01';
+  document.getElementById('fDateTo').value = '2024-12-31';
+  document.getElementById('tableSearch').value = '';
+  render();
+});
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+document.getElementById('lastUpdated').textContent = 'Generated: ' + new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+render();
+</script>
+</body>
+</html>
